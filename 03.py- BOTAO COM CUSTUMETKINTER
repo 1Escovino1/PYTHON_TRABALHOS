@@ -1,0 +1,9 @@
+import customtkinter as ctk #importando biblioteca 
+
+janela = ctk.CTk() #criando a janela
+ 
+janela._set_appearance_mode("light")
+
+btn = ctk.CTkButton(janela, text="hellooo")
+btn.pack()
+janela.mainloop()
