@@ -1,0 +1,14 @@
+import customtkinter as ctk #importando biblioteca 
+
+janela = ctk.CTk() #criando a janela
+ 
+janela.title("TESTE")#dando o titulo a janela
+janela.geometry("1000x500") #geometri inicial da janela
+janela.maxsize(width=1800, height=750) # tamanho maximo da janela
+janela.minsize(width=500, height=500) #tamanho minimo da janela
+janela.resizable(width=True, height=False)#bloqueia ou permite a abertura da tela
+janela.iconify()#FECHA a janela 
+janela.deiconify()# abre a janela
+
+
+janela.mainloop()
