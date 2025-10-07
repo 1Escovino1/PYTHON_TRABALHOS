@@ -12,3 +12,9 @@ janela.deiconify()# abre a janela
 
 
 janela.mainloop()
+
+--------------------------------------------------------------------------------------------------------------------------------------
+#para mudar a cor padrao:
+#janela._set_appearance_mode("light")
+#janela._set_appearance_mode("darck")
+#janela._set_appearance_mode("system")
