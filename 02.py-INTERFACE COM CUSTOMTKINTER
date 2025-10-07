@@ -14,3 +14,14 @@ janela._set_appearance_mode("light")
 
 janela.mainloop()
 
+---------------------------------------------------------------------------------------------------------------------
+
+import customtkinter as BOGAGRANDAO #importando biblioteca 
+
+janela = BOGAGRANDAO.CTk() #criando a janela
+ 
+janela._set_appearance_mode("light")
+
+janela.mainloop()
+
+
