@@ -1,0 +1,6 @@
+from tkinter import * #importando a biblioteca
+
+janela = Tk()#criando a janela principal
+
+janela.mainloop()#rodando a janela
+
