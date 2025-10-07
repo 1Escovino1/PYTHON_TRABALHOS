@@ -3,3 +3,14 @@ import customtkinter #importando biblioteca
 janela = customtkinter.CTk() #criando a janela
  
 janela.mainloop()
+
+-----------------------------------------------------------------------
+
+import customtkinter #importando biblioteca 
+
+janela = customtkinter.CTk() #criando a janela
+ 
+janela._set_appearance_mode("light")
+
+janela.mainloop()
+
