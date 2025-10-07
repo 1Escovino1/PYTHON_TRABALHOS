@@ -1,0 +1,14 @@
+import customtkinter as ctk #importando biblioteca 
+
+janela = ctk.CTk() #criando a janela
+ 
+janela.title("TESTE")#dando o titulo a janela
+janela.geometry("1000x700") #geometri inicial da janela
+
+#para criar novas janelas
+#vamos criar um botao que vai criar uma nova tela
+def novatela():
+    novajanela = ctk.CTkToplevel(janela, fg_color="green")# pode por cor de fundo     
+    novajanela.geometry("500x500")
+btn_novatela = ctk.CTkButton(master= janela, text="abrir nova janela", command=novatela).place(x=300, y=100)
+janela.mainloop()
