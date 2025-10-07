@@ -1,0 +1,5 @@
+import customtkinter #importando biblioteca 
+
+janela = customtkinter.CTk() #criando a janela
+ 
+janela.mainloop()
