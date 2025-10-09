@@ -1,0 +1,15 @@
+import customtkinter as ctk
+import threading
+import time
+from datetime import datetime
+
+ctk.set_appearance_mode("dark")
+
+class MorseInterface(ctk.CTk):
+    def __init__(self):
+        super().__init__()#cria a janela base
+        self.title("DECODIFICADOR MORSE-ARDUINO")
+        self.geometry("1200x800")
+
+app = MorseInterface()
+app.mainloop()
