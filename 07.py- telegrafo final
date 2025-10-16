@@ -1,0 +1,406 @@
+import customtkinter as ctk
+import serial
+import serial.tools.list_ports
+import threading
+import time
+
+# Configuração do tema
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")\
+
+class MorseSimples(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        
+        # Configurações da janela
+        self.title("TELÉGRAFO MORSE")
+        self.geometry("700x600")
+        
+        # Variáveis
+        self.arduino = None
+        self.conectado = False
+        self.mensagem_decodificada = ""
+        
+        self.criar_interface()
+        self.atualizar_portas()
+        
+    def criar_interface(self):
+        # ===== CABEÇALHO =====
+        frame_header = ctk.CTkFrame(self, height=100, corner_radius=15)
+        frame_header.pack(fill="x", padx=20, pady=20)
+        frame_header.pack_propagate(False)
+        
+        ctk.CTkLabel(
+            frame_header,
+            text="TELÉGRAFO MORSE",
+            font=("Arial Bold", 28)
+        ).pack(pady=10)
+        
+        # Conexão
+        frame_conn = ctk.CTkFrame(frame_header, fg_color="transparent")
+        frame_conn.pack()
+        
+        self.combo_porta = ctk.CTkComboBox(
+            frame_conn,
+            width=120,
+            state="readonly"
+        )
+        self.combo_porta.pack(side="left", padx=5)
+        
+        self.btn_conectar = ctk.CTkButton(
+            frame_conn,
+            text="Conectar",
+            command=self.toggle_conexao,
+            width=120,
+            height=35,
+            fg_color="#2ecc71",
+            hover_color="#27ae60"
+        )
+        self.btn_conectar.pack(side="left", padx=5)
+        
+        self.label_status = ctk.CTkLabel(
+            frame_conn,
+            text="●",
+            font=("Arial", 20),
+            text_color="#e74c3c"
+        )
+        self.label_status.pack(side="left", padx=10)
+        
+        # ===== MENSAGEM DECODIFICADA =====
+        ctk.CTkLabel(
+            self,
+            text="MENSAGEM RECEBIDA",
+            font=("Arial Bold", 18)
+        ).pack(pady=(10, 5))
+        
+        self.text_decodificado = ctk.CTkTextbox(
+            self,
+            font=("Arial Bold", 36),
+            height=150,
+            fg_color="#2c3e50",
+            wrap="word"
+        )
+        self.text_decodificado.pack(fill="x", padx=20, pady=10)
+        
+        # ===== CÓDIGO MORSE COM HISTÓRICO =====
+        ctk.CTkLabel(
+            self,
+            text="HISTÓRICO CÓDIGO MORSE",
+            font=("Arial Bold", 18)
+        ).pack(pady=(10, 5))
+        
+        self.text_morse = ctk.CTkTextbox(
+            self,
+            font=("Courier New", 16),
+            height=150,
+            fg_color="#34495e",
+            wrap="none"
+        )
+        self.text_morse.pack(fill="both", expand=True, padx=20, pady=10)
+        
+        # ===== ENVIAR MENSAGEM =====
+        ctk.CTkLabel(
+            self,
+            text="ENVIAR PARA ARDUINO",
+            font=("Arial Bold", 18)
+        ).pack(pady=(10, 5))
+        
+        frame_enviar = ctk.CTkFrame(self, fg_color="transparent")
+        frame_enviar.pack(fill="x", padx=20, pady=10)
+        
+        self.entry_texto = ctk.CTkEntry(
+            frame_enviar,
+            placeholder_text="Digite sua mensagem aqui...",
+            font=("Arial", 16),
+            height=50
+        )
+        self.entry_texto.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        self.entry_texto.bind("<Return>", lambda e: self.enviar())
+        
+        self.btn_enviar = ctk.CTkButton(
+            frame_enviar,
+            text="Enviar",
+            command=self.enviar,
+            width=120,
+            height=50,
+            font=("Arial Bold", 14),
+            state="disabled",
+            fg_color="#3498db",
+            hover_color="#2980b9"
+        )
+        self.btn_enviar.pack(side="left")
+        
+        # ===== BOTÕES DE AÇÃO =====
+        frame_botoes = ctk.CTkFrame(self, fg_color="transparent")
+        frame_botoes.pack(pady=15)
+        
+        ctk.CTkButton(
+            frame_botoes,
+            text="Limpar Mensagem",
+            command=self.limpar_mensagem,
+            width=140,
+            height=40,
+            fg_color="#e67e22",
+            hover_color="#d35400"
+        ).pack(side="left", padx=5)
+        
+        ctk.CTkButton(
+            frame_botoes,
+            text="Limpar Histórico",
+            command=self.limpar_historico,
+            width=140,
+            height=40,
+            fg_color="#e74c3c",
+            hover_color="#c0392b"
+        ).pack(side="left", padx=5)
+        
+        ctk.CTkButton(
+            frame_botoes,
+            text="Salvar Tudo",
+            command=self.salvar,
+            width=140,
+            height=40,
+            fg_color="#9b59b6",
+            hover_color="#8e44ad"
+        ).pack(side="left", padx=5)
+    
+    def atualizar_portas(self):
+        """Atualiza lista de portas COM"""
+        portas = serial.tools.list_ports.comports()
+        lista_portas = [p.device for p in portas]
+        
+        if lista_portas:
+            self.combo_porta.configure(values=lista_portas)
+            self.combo_porta.set(lista_portas[0])
+    
+    def toggle_conexao(self):
+        """Conectar/Desconectar"""
+        if not self.conectado:
+            self.conectar()
+        else:
+            self.desconectar()
+    
+    def conectar(self):
+        """Conecta ao Arduino"""
+        porta = self.combo_porta.get()
+        
+        try:
+            self.arduino = serial.Serial(porta, 9600, timeout=1)
+            time.sleep(2)
+            self.conectado = True
+            
+            # Atualizar UI
+            self.btn_conectar.configure(
+                text="Desconectar",
+                fg_color="#e74c3c",
+                hover_color="#c0392b"
+            )
+            self.label_status.configure(text_color="#2ecc71")
+            self.btn_enviar.configure(state="normal")
+            self.combo_porta.configure(state="disabled")
+            
+            # Iniciar leitura
+            threading.Thread(target=self.ler_serial, daemon=True).start()
+            
+        except serial.SerialException as e:
+            erro_msg = str(e)
+            
+            if "PermissionError" in erro_msg or "Acesso negado" in erro_msg:
+                # Mostrar popup de erro
+                popup = ctk.CTkToplevel(self)
+                popup.title("Erro de Conexão")
+                popup.geometry("500x300")
+                popup.grab_set()
+                
+                ctk.CTkLabel(
+                    popup,
+                    text="PORTA OCUPADA",
+                    font=("Arial Bold", 20),
+                    text_color="#e74c3c"
+                ).pack(pady=20)
+                
+                ctk.CTkLabel(
+                    popup,
+                    text=f"A porta {porta} está sendo usada\npor outro programa!",
+                    font=("Arial", 14)
+                ).pack(pady=10)
+                
+                frame_solucoes = ctk.CTkFrame(popup)
+                frame_solucoes.pack(pady=20, padx=20, fill="both", expand=True)
+                
+                solucoes = [
+                    "1. Feche o Serial Monitor do Arduino IDE",
+                    "2. Feche o Arduino IDE completamente",
+                    "3. Desconecte e reconecte o cabo USB",
+                    "4. Verifique outros programas seriais abertos"
+                ]
+                
+                for solucao in solucoes:
+                    ctk.CTkLabel(
+                        frame_solucoes,
+                        text=solucao,
+                        font=("Arial", 12),
+                        anchor="w"
+                    ).pack(pady=5, padx=10, anchor="w")
+                
+                ctk.CTkButton(
+                    popup,
+                    text="OK",
+                    command=popup.destroy,
+                    width=100
+                ).pack(pady=10)
+            else:
+                print(f"Erro: {erro_msg}")
+        except Exception as e:
+            print(f"Erro: {e}")
+    
+    def desconectar(self):
+        """Desconecta do Arduino"""
+        self.conectado = False
+        if self.arduino:
+            self.arduino.close()
+        
+        self.btn_conectar.configure(
+            text="Conectar",
+            fg_color="#2ecc71",
+            hover_color="#27ae60"
+        )
+        self.label_status.configure(text_color="#e74c3c")
+        self.btn_enviar.configure(state="disabled")
+        self.combo_porta.configure(state="readonly")
+    
+    def ler_serial(self):
+        """Lê dados do Arduino"""
+        ultima_morse = ""
+        
+        while self.conectado:
+            try:
+                if self.arduino and self.arduino.in_waiting > 0:
+                    linha = self.arduino.readline().decode('utf-8').strip()
+                    
+                    if linha:
+                        self.after(0, self.processar, linha, ultima_morse)
+                        
+                        # Atualizar código morse se for letra
+                        if linha.startswith("MORSE:LETTER:"):
+                            partes = linha.split(":")
+                            if len(partes) >= 4:
+                                ultima_morse = partes[3]
+                        
+            except:
+                break
+            
+            time.sleep(0.05)
+    
+    def processar(self, dados, morse_atual):
+        """Processa dados do Arduino"""
+        if not dados.startswith("MORSE:"):
+            return
+        
+        partes = dados.split(":", 2)
+        if len(partes) < 2:
+            return
+        
+        tipo = partes[1]
+        
+        # LETRA DECODIFICADA
+        if tipo == "LETTER":
+            info = partes[2].split(":")
+            letra = info[0]
+            morse = info[1] if len(info) > 1 else ""
+            
+            # Adicionar letra
+            self.mensagem_decodificada += letra
+            self.text_decodificado.delete("1.0", "end")
+            self.text_decodificado.insert("1.0", self.mensagem_decodificada)
+            
+            # Adicionar ao histórico (não substitui, adiciona)
+            if morse:
+                morse_visual = morse.replace(".", "• ").replace("-", "— ")
+                linha_historico = f"{letra}  =  {morse_visual}\n"
+                self.text_morse.insert("end", linha_historico)
+                self.text_morse.see("end")  # Scroll automático para o final
+        
+        # ESPAÇO
+        elif tipo == "WORD_SPACE":
+            self.mensagem_decodificada += " "
+            self.text_decodificado.delete("1.0", "end")
+            self.text_decodificado.insert("1.0", self.mensagem_decodificada)
+            
+            # Adicionar separador visual no histórico
+            self.text_morse.insert("end", "─────────────────\n")
+            self.text_morse.see("end")
+        
+        # TEXTO DO PYTHON → ARDUINO
+        elif tipo == "TEXT":
+            info = partes[2].split(":")
+            if len(info) >= 2:
+                letra = info[0]
+                morse = info[1]
+                morse_visual = morse.replace(".", "• ").replace("-", "— ")
+                
+                # Adicionar ao histórico com marcação de enviado
+                linha_historico = f"→ {letra}  =  {morse_visual}\n"
+                self.text_morse.insert("end", linha_historico)
+                self.text_morse.see("end")
+    
+    def enviar(self):
+        """Envia texto para Arduino"""
+        texto = self.entry_texto.get().strip()
+        
+        if texto and self.conectado:
+            for char in texto.upper():
+                self.arduino.write(char.encode('utf-8'))
+                time.sleep(0.3)  # Delay entre caracteres
+            
+            self.entry_texto.delete(0, "end")
+    
+    def limpar_mensagem(self):
+        """Limpa apenas a mensagem decodificada"""
+        self.mensagem_decodificada = ""
+        self.text_decodificado.delete("1.0", "end")
+    
+    def limpar_historico(self):
+        """Limpa apenas o histórico morse"""
+        self.text_morse.delete("1.0", "end")
+    
+    def limpar_tudo(self):
+        """Limpa mensagem e histórico"""
+        self.limpar_mensagem()
+        self.limpar_historico()
+    
+    def salvar(self):
+        """Salva mensagem e histórico em arquivo"""
+        if self.mensagem_decodificada or self.text_morse.get("1.0", "end").strip():
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            with open(f"morse_{timestamp}.txt", 'w', encoding='utf-8') as f:
+                f.write("=" * 50 + "\n")
+                f.write("REGISTRO TELÉGRAFO MORSE\n")
+                f.write(f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}\n")
+                f.write("=" * 50 + "\n\n")
+                
+                f.write("MENSAGEM DECODIFICADA:\n")
+                f.write("-" * 50 + "\n")
+                f.write(self.mensagem_decodificada + "\n\n")
+                
+                f.write("CÓDIGO MORSE:\n")
+                f.write("-" * 50 + "\n")
+                f.write(self.text_morse.get("1.0", "end"))
+            
+            print(f"Salvo: morse_{timestamp}.txt")
+        else:
+            print("Nada para salvar")
+    
+    def on_closing(self):
+        """Ao fechar"""
+        if self.conectado:
+            self.desconectar()
+        self.destroy()
+
+# ===== EXECUTAR =====
+if __name__ == "__main__":
+    app = MorseSimples()
+    app.protocol("WM_DELETE_WINDOW", app.on_closing)
+    app.mainloop()
